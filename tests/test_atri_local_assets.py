@@ -94,3 +94,48 @@ def test_inline_atri_assets_accepts_trailing_slash_in_mirror_setting() -> None:
 
     assert result.replacements == 1
     assert result.html.startswith('<img src="data:image/webp;base64,')
+
+
+def test_screenshot_optimization_keeps_one_font_and_uses_static_webp() -> None:
+    mirror = "https://assets.example.test"
+    regular_font = "1775130743963_1774880718993_LXGWWenKai-Regular.woff2"
+    medium_font = "1775130739223_1774880715380_LXGWWenKai-Medium.woff2"
+    mono_font = "1775130738049_1774880717027_LXGWWenKaiMono-Regular.woff2"
+    gif_name = "1775132804506_1774881263342_观察.gif"
+    html = "".join(
+        (
+            f"@font-face{{src:url('{mirror}/file/{regular_font}')}}",
+            f"@font-face{{src:url('{mirror}/file/{medium_font}')}}",
+            f"@font-face{{src:url('{mirror}/file/{mono_font}')}}",
+            f'<img src="{mirror}/file/{gif_name}">',
+        )
+    )
+
+    result = inline_atri_assets(html, mirror, optimize_for_screenshot=True)
+
+    assert result.removed_font_faces == 2
+    assert result.static_image_substitutions == 1
+    assert result.html.count("data:font/woff2;base64,") == 1
+    assert "data:image/webp;base64," in result.html
+    assert "data:image/gif;base64," not in result.html
+
+
+def test_standalone_html_keeps_full_fonts_and_animated_gif() -> None:
+    mirror = "https://assets.example.test"
+    fonts = (
+        "1775130743963_1774880718993_LXGWWenKai-Regular.woff2",
+        "1775130739223_1774880715380_LXGWWenKai-Medium.woff2",
+        "1775130738049_1774880717027_LXGWWenKaiMono-Regular.woff2",
+    )
+    gif_name = "1775132804506_1774881263342_观察.gif"
+    html = "".join(
+        [f"@font-face{{src:url('{mirror}/file/{font}')}}" for font in fonts]
+        + [f'<img src="{mirror}/file/{gif_name}">']
+    )
+
+    result = inline_atri_assets(html, mirror)
+
+    assert result.removed_font_faces == 0
+    assert result.static_image_substitutions == 0
+    assert result.html.count("data:font/woff2;base64,") == 3
+    assert "data:image/gif;base64," in result.html

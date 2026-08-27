@@ -397,7 +397,9 @@ class ReportGenerator(IReportGenerator):
                 render_payload.get("avatar_reuse_registry", {}),
                 render_payload.get("avatar_reuse_aliases", {}),
             )
-            html_content = self._inline_packaged_atri_assets(html_content)
+            html_content = self._inline_packaged_atri_assets(
+                html_content, optimize_for_screenshot=True
+            )
 
             # 检查HTML内容是否有效
             if not html_content:
@@ -1692,19 +1694,24 @@ class ReportGenerator(IReportGenerator):
             html_content, ReportGenerator._build_avatar_reuse_styles(registry)
         )
 
-    def _inline_packaged_atri_assets(self, html_content: str) -> str:
+    def _inline_packaged_atri_assets(
+        self, html_content: str, *, optimize_for_screenshot: bool = False
+    ) -> str:
         """Make ATRI reports independent from the external asset mirror."""
         get_mirror = getattr(self.config_manager, "get_t2i_atri_font_mirror", None)
         mirror_url = get_mirror() if callable(get_mirror) else ATRI_DEFAULT_MIRROR
         result = inline_atri_assets(
             html_content,
             mirror_url,
+            optimize_for_screenshot=optimize_for_screenshot,
         )
         if result.replacements:
             logger.info(
                 "ATRI 本地资源内联完成: "
                 f"引用 {result.replacements} 处, "
                 f"资源 {result.unique_assets} 个, "
+                f"精简字体 {result.removed_font_faces} 个, "
+                f"静态图替换 {result.static_image_substitutions} 处, "
                 f"HTML {len(html_content)} -> {len(result.html)} 字符"
             )
         if result.missing_assets:
