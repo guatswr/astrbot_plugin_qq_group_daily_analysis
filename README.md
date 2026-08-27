@@ -178,6 +178,9 @@ _✨ 一个基于 AstrBot 的智能群聊分析插件，支持 **OneBot** ( [Nap
 >
 > **更换 T2I 端点或自部署 T2I 参考文档**：[docs.astrbot.app/others/self-host-t2i.html](https://docs.astrbot.app/others/self-host-t2i.html)
 
+> [!NOTE]
+> 内置 `ATRI` 主题的字体、WebP 与 GIF 已随插件打包。生成图片或 HTML 报告时，插件会把这些本地文件内联为 Data URI，因此 ATRI 渲染不再依赖外部素材镜像；T2I 接口本身仍需保持可访问。
+
 > [!warning]
 > **实验性开发中**：
 > - 多平台支持功能尚在开发中，当前仅支持 OneBot (NapCat, LLOneBot, Snowluma), QQ 官方机器人, Discord, Telegram。

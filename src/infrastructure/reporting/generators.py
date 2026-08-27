@@ -31,6 +31,7 @@ from ...shared.trace_context import TraceContext
 from ...utils.logger import logger
 from ..utils.template_utils import render_template
 from ..visualization.activity_charts import ActivityVisualizer
+from .local_assets import ATRI_DEFAULT_MIRROR, inline_atri_assets
 from .qq_official_markdown import QQOfficialMarkdownReportGenerator
 from .templates import HTMLTemplates
 
@@ -396,6 +397,7 @@ class ReportGenerator(IReportGenerator):
                 render_payload.get("avatar_reuse_registry", {}),
                 render_payload.get("avatar_reuse_aliases", {}),
             )
+            html_content = self._inline_packaged_atri_assets(html_content)
 
             # 检查HTML内容是否有效
             if not html_content:
@@ -770,6 +772,7 @@ class ReportGenerator(IReportGenerator):
                     render_data.get("avatar_reuse_registry", {}),
                     render_data.get("avatar_reuse_aliases", {}),
                 )
+                html_content = self._inline_packaged_atri_assets(html_content)
                 logger.debug("使用 html_template.html 渲染成功")
             except Exception as e:
                 logger.warning(
@@ -783,6 +786,7 @@ class ReportGenerator(IReportGenerator):
                     render_data.get("avatar_reuse_registry", {}),
                     render_data.get("avatar_reuse_aliases", {}),
                 )
+                html_content = self._inline_packaged_atri_assets(html_content)
                 logger.debug("使用 image_template.html 渲染成功")
 
             # 检查HTML内容是否有效
@@ -1687,6 +1691,28 @@ class ReportGenerator(IReportGenerator):
         return ReportGenerator._inject_avatar_reuse_styles(
             html_content, ReportGenerator._build_avatar_reuse_styles(registry)
         )
+
+    def _inline_packaged_atri_assets(self, html_content: str) -> str:
+        """Make ATRI reports independent from the external asset mirror."""
+        get_mirror = getattr(self.config_manager, "get_t2i_atri_font_mirror", None)
+        mirror_url = get_mirror() if callable(get_mirror) else ATRI_DEFAULT_MIRROR
+        result = inline_atri_assets(
+            html_content,
+            mirror_url,
+        )
+        if result.replacements:
+            logger.info(
+                "ATRI 本地资源内联完成: "
+                f"引用 {result.replacements} 处, "
+                f"资源 {result.unique_assets} 个, "
+                f"HTML {len(html_content)} -> {len(result.html)} 字符"
+            )
+        if result.missing_assets:
+            logger.warning(
+                "ATRI 模板引用了未随插件打包的资源，仍将保留远程 URL: "
+                + ", ".join(result.missing_assets)
+            )
+        return result.html
 
     @staticmethod
     def _inject_avatar_reuse_styles(html_content: str, avatar_reuse_styles: str) -> str:
